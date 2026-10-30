@@ -89,25 +89,25 @@ Expected: the dashboard reports the failed backup.
 
 ### 5. Ignore a check
 
-**Ignore a single resource**
+**5.1 Ignore a single resource**
 
 1. Click **Ignore** on the `ImageRetryLimitExceeded` row.
 2. Set **Scope** to `Selected resources`, keep one resource, and click **Ignore**.
 
 Expected: the ignored resource is no longer listed in the check.
 
-![test case 5-1](images/harvester-8436/5-1.png)
-![test case 5-2](images/harvester-8436/5-2.png)
-![test case 5-3](images/harvester-8436/5-3.png)
+![test case 5.1 a](images/harvester-8436/5-1-a.png)
+![test case 5.1 b](images/harvester-8436/5-1-b.png)
+![test case 5.1 c](images/harvester-8436/5-1-c.png)
 
-**Ignore the entire check**
+**5.2 Ignore the entire check**
 
 1. Click **Ignore** on the `ImageRetryLimitExceeded` row.
 2. Set **Scope** to `Entire check` and click **Ignore**.
 
 Expected: the whole check disappears from the dashboard.
 
-**Expired ignore rule**
+**5.3 Expired ignore rule**
 
 1. Edit the latest `healthignorerules` resource and set `expire` to a past time:
 
