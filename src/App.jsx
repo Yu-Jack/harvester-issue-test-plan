@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import plans from './plans.json';
 import { matches, parseTerms, snippet } from './search.js';
 import rehypeMark from './rehypeMark.js';
+import { extractHeadings, rehypeHeadingIds } from './headings.js';
 
 const useHash = () => {
   const [hash, setHash] = useState(location.hash.slice(1));
@@ -39,31 +40,80 @@ function Lightbox({ src, alt, onClose }) {
   );
 }
 
+function Outline({ headings, scrollRoot }) {
+  const [active, setActive] = useState(headings[0]?.id);
+
+  // Scroll spy: the last heading that has passed the top of the content area.
+  useEffect(() => {
+    const root = scrollRoot.current;
+    if (!root || !headings.length) return;
+    const onScroll = () => {
+      const top = root.getBoundingClientRect().top + 24;
+      let cur = headings[0].id;
+      for (const h of headings) {
+        const el = document.getElementById(h.id);
+        if (el && el.getBoundingClientRect().top <= top) cur = h.id;
+      }
+      setActive(cur);
+    };
+    onScroll();
+    root.addEventListener('scroll', onScroll, { passive: true });
+    return () => root.removeEventListener('scroll', onScroll);
+  }, [headings, scrollRoot]);
+
+  if (!headings.length) return null;
+  // Buttons, not #anchors: the URL hash is already used to pick the plan.
+  return (
+    <aside className="outline" aria-label="Outline">
+      <div className="outline-title">Outline</div>
+      {headings.map((h) => (
+        <button
+          key={h.id}
+          className={`lv${h.level}${h.id === active ? ' active' : ''}`}
+          onClick={() => document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
+          {h.text}
+        </button>
+      ))}
+    </aside>
+  );
+}
+
 function PlanView({ plan, terms }) {
   const [zoom, setZoom] = useState(null);
-  const rehypePlugins = useMemo(() => [[rehypeMark, { terms }]], [terms]);
+  const scrollRoot = useRef(null);
+  const headings = useMemo(() => extractHeadings(plan.body), [plan.body]);
+  const rehypePlugins = useMemo(() => [rehypeHeadingIds, [rehypeMark, { terms }]], [terms]);
   const components = useMemo(() => ({
     img: ({ src, alt }) => (
       <img src={src} alt={alt} className="zoomable" onClick={() => setZoom({ src, alt })} />
     ),
   }), []);
+
+  // New plan: start from the top.
+  useEffect(() => { scrollRoot.current?.scrollTo(0, 0); }, [plan.id]);
+
   return (
-    <>
+    <div className="content" ref={scrollRoot}>
       {zoom && <Lightbox {...zoom} onClose={() => setZoom(null)} />}
-      <h1>{plan.title}</h1>
-      <p className="meta">
-        <a href={`https://github.com/${plan.repo}/issues/${plan.issue}`} target="_blank" rel="noopener noreferrer">
-          {plan.repo}#{plan.issue}
-        </a>
-        {plan.source && <> · <a href={plan.source} target="_blank" rel="noopener noreferrer">original comment</a></>}
-      </p>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={components}>{plan.body}</ReactMarkdown>
-    </>
+      <main>
+        <h1 className="plan-title">{plan.title}</h1>
+        <p className="meta">
+          <a href={`https://github.com/${plan.repo}/issues/${plan.issue}`} target="_blank" rel="noopener noreferrer">
+            {plan.repo}#{plan.issue}
+          </a>
+          {plan.source && <> · <a href={plan.source} target="_blank" rel="noopener noreferrer">original comment</a></>}
+        </p>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={components}>{plan.body}</ReactMarkdown>
+      </main>
+      <Outline headings={headings} scrollRoot={scrollRoot} />
+    </div>
   );
 }
 
 export default function App() {
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(true);
   const hash = useHash();
   const terms = useMemo(() => parseTerms(query), [query]);
   const hits = useMemo(() => plans.filter((p) => matches(p, terms)), [terms]);
@@ -72,20 +122,32 @@ export default function App() {
   return (
     <>
       <header>
+        <button
+          className="menu"
+          aria-label={open ? 'Hide search panel' : 'Show search panel'}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span /><span /><span />
+        </button>
         <h1>Harvester Issue Test Plans</h1>
-        <input
-          type="search"
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by issue number, title, or test plan content…"
-        />
       </header>
       <div className="layout">
-        <nav><PlanList hits={hits} terms={terms} current={current?.id} /></nav>
-        <main>
-          {current ? <PlanView plan={current} terms={terms} /> : <p className="meta">Select an issue on the left.</p>}
-        </main>
+        {open && (
+          <nav>
+            <div className="search">
+              <input
+                type="search"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search issue, title, or content…"
+              />
+            </div>
+            <PlanList hits={hits} terms={terms} current={current?.id} />
+          </nav>
+        )}
+        {current ? <PlanView key={current.id} plan={current} terms={terms} /> : <p className="meta pad">Select an issue on the left.</p>}
       </div>
     </>
   );
