@@ -106,27 +106,108 @@ Expected: an `Error` check `Reach Max Failure` is shown for the `ScheduleVMBacku
 
 ![test case 6](images/harvester-8436/6.png)
 
-### 7. Ignore a check
+### 7. VolumeRemoteBackup fails
 
-**7.1 Ignore a single resource**
+This case needs a **guest cluster** (a downstream cluster provisioned on Harvester). Run all `kubectl` commands against the guest cluster, and make sure the backup target's bucket has only a small amount of space (for example, a bucket quota that is easy to exceed).
+
+**Step 1: Create the `VolumeSnapshotClass` used for backup**
+
+```yaml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: harvester-backup
+driver: driver.harvesterhci.io
+deletionPolicy: Delete
+parameters:
+  type: backup
+```
+
+**Step 2: Create a PVC and a pod that writes data**
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vrb-test-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: harvester
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vrb-test-pod
+  namespace: default
+spec:
+  containers:
+    - name: writer
+      image: busybox:1.36
+      command: ["sh", "-c", "echo hello-vrb > /data/hello.txt && sync && sleep 36000"]
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: vrb-test-pvc
+```
+
+```bash
+kubectl -n default get pvc vrb-test-pvc    # wait until Bound
+kubectl -n default get pod vrb-test-pod    # wait until Running
+kubectl -n default exec vrb-test-pod -- cat /data/hello.txt    # should print hello-vrb
+```
+
+**Step 3: Create a `VolumeSnapshot` to trigger the backup**
+
+```yaml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: vrb-test-snapshot
+  namespace: default
+spec:
+  volumeSnapshotClassName: harvester-backup
+  source:
+    persistentVolumeClaimName: vrb-test-pvc
+```
+
+```bash
+kubectl -n default get volumesnapshot vrb-test-snapshot -w    # watch READYTOUSE, Ctrl+C to exit
+```
+
+Expected: the backup fails, and the dashboard shows an `Error` check `VolumeRemoteBackupFailed` for the `VolumeRemoteBackup` (for example, with the message `Bucket quota exceeded`).
+
+![test case 7](images/harvester-8436/7.png)
+
+### 8. Ignore a check
+
+**8.1 Ignore a single resource**
 
 1. Click **Ignore** on the `ImageRetryLimitExceeded` row.
 2. Set **Scope** to `Selected resources`, keep one resource, and click **Ignore**.
 
 Expected: the ignored resource is no longer listed in the check.
 
-![test case 7.1 a](images/harvester-8436/7-1-a.png)
-![test case 7.1 b](images/harvester-8436/7-1-b.png)
-![test case 7.1 c](images/harvester-8436/7-1-c.png)
+![test case 8.1 a](images/harvester-8436/8-1-a.png)
+![test case 8.1 b](images/harvester-8436/8-1-b.png)
+![test case 8.1 c](images/harvester-8436/8-1-c.png)
 
-**7.2 Ignore the entire check**
+**8.2 Ignore the entire check**
 
 1. Click **Ignore** on the `ImageRetryLimitExceeded` row.
 2. Set **Scope** to `Entire check` and click **Ignore**.
 
 Expected: the whole check disappears from the dashboard.
 
-**7.3 Expired ignore rule**
+**8.3 Expired ignore rule**
 
 1. Edit the latest `healthignorerules` resource and set `expire` to a past time:
 
