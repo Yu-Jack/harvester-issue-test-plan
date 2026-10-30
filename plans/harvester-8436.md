@@ -86,7 +86,6 @@ Expected: the dashboard reports the failed backup.
 
 ![test case 4](images/harvester-8436/4.png)
 
-
 ### 5. Ignore a check
 
 **5.1 Ignore a single resource**
@@ -117,3 +116,24 @@ kubectl edit healthignorerules <name>
 ```
 
 Expected: the ignore no longer applies, and the check is shown on the dashboard again.
+
+
+### 6. Generate a support bundle
+
+1. Create a support bundle.
+2. Open the dashboard while the support bundle is generating.
+
+Expected: an `Info` check `SupportBundleGenerating` is shown for the generating `SupportBundle`.
+
+![test case 6](images/harvester-8436/6.png)
+
+
+### 7. ScheduleVMBackup reaches max failure
+
+1. Create a `ScheduleVMBackup` with **Retain** `3` and **Max Failure** `2`.
+2. Set the cron schedule to a time that is about to arrive, so it triggers three times in a short period.
+3. Make the scheduled backups fail (for example, use a backup target that cannot be written to).
+
+Expected: an `Error` check `Reach Max Failure` is shown for the `ScheduleVMBackup`, with a message like `failure backups 2 reach max tolerance 2`.
+
+![test case 7](images/harvester-8436/7.png)
