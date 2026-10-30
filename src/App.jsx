@@ -6,6 +6,7 @@ import { matches, parseTerms, snippet } from './search.js';
 import rehypeMark from './rehypeMark.js';
 import { extractHeadings, rehypeHeadingIds } from './headings.js';
 import { calloutClass } from './callouts.js';
+import { testCaseIds, useProgress } from './progress.js';
 
 const useHash = () => {
   const [hash, setHash] = useState(location.hash.slice(1));
@@ -41,7 +42,7 @@ function Lightbox({ src, alt, onClose }) {
   );
 }
 
-function Outline({ headings, scrollRoot }) {
+function Outline({ headings, scrollRoot, testCases, done, toggle }) {
   const [active, setActive] = useState(headings[0]?.id);
 
   // Scroll spy: the last heading that has passed the top of the content area.
@@ -63,19 +64,30 @@ function Outline({ headings, scrollRoot }) {
   }, [headings, scrollRoot]);
 
   if (!headings.length) return null;
+  const finished = [...testCases].filter((id) => done.has(id)).length;
+  const jump = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   // Buttons, not #anchors: the URL hash is already used to pick the plan.
   return (
     <aside className="outline" aria-label="Outline">
       <div className="outline-title">Outline</div>
-      {headings.map((h) => (
-        <button
-          key={h.id}
-          className={`lv${h.level}${h.id === active ? ' active' : ''}`}
-          onClick={() => document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-        >
-          {h.text}
-        </button>
-      ))}
+      {testCases.size > 0 && (
+        <div className="progress" aria-label="Test progress">
+          <div className="progress-bar"><span style={{ width: `${(finished / testCases.size) * 100}%` }} /></div>
+          {finished}/{testCases.size} tested
+        </div>
+      )}
+      {headings.map((h) => {
+        const cls = `lv${h.level}${h.id === active ? ' active' : ''}`;
+        if (!testCases.has(h.id)) {
+          return <button key={h.id} className={cls} onClick={() => jump(h.id)}>{h.text}</button>;
+        }
+        return (
+          <div key={h.id} className={`case${done.has(h.id) ? ' done' : ''}`}>
+            <input type="checkbox" checked={done.has(h.id)} onChange={() => toggle(h.id)} aria-label={`Mark "${h.text}" as tested`} />
+            <button className={cls} onClick={() => jump(h.id)}>{h.text}</button>
+          </div>
+        );
+      })}
     </aside>
   );
 }
@@ -85,12 +97,22 @@ function PlanView({ plan, terms }) {
   const scrollRoot = useRef(null);
   const headings = useMemo(() => extractHeadings(plan.body), [plan.body]);
   const rehypePlugins = useMemo(() => [rehypeHeadingIds, [rehypeMark, { terms }]], [terms]);
+  const testCases = useMemo(() => testCaseIds(headings), [headings]);
+  const { done, toggle } = useProgress(plan.id);
   const components = useMemo(() => ({
     p: ({ node, children }) => <p className={calloutClass(node)}>{children}</p>,
+    h3: ({ node, id, children }) => (
+      <h3 id={id} className={testCases.has(id) ? 'case-heading' : undefined}>
+        {testCases.has(id) && (
+          <input type="checkbox" checked={done.has(id)} onChange={() => toggle(id)} aria-label="Mark as tested" />
+        )}
+        {children}
+      </h3>
+    ),
     img: ({ src, alt }) => (
       <img src={src} alt={alt} className="zoomable" onClick={() => setZoom({ src, alt })} />
     ),
-  }), []);
+  }), [testCases, done, toggle]);
 
   // New plan: start from the top.
   useEffect(() => { scrollRoot.current?.scrollTo(0, 0); }, [plan.id]);
@@ -108,7 +130,7 @@ function PlanView({ plan, terms }) {
         </p>
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={components}>{plan.body}</ReactMarkdown>
       </main>
-      <Outline headings={headings} scrollRoot={scrollRoot} />
+      <Outline headings={headings} scrollRoot={scrollRoot} testCases={testCases} done={done} toggle={toggle} />
     </div>
   );
 }

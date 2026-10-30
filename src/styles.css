@@ -47,6 +47,15 @@ mark { background:var(--hit); color:inherit; }
 .outline .lv1 { font-weight:600; }
 .outline .lv2 { padding-left:20px; }
 .outline .lv3 { padding-left:32px; }
+.outline .progress { margin:0 8px 8px; color:var(--muted); font-size:12px; }
+.progress-bar { height:4px; margin-bottom:4px; background:var(--line); border-radius:2px; overflow:hidden; }
+.progress-bar span { display:block; height:100%; background:#1a7f37; transition:width .2s; }
+.outline .case { display:flex; align-items:center; gap:4px; padding-left:16px; }
+.outline .case input { flex:none; margin:0; cursor:pointer; }
+.outline .case button { padding-left:4px; }
+.outline .case.done button { color:var(--muted); text-decoration:line-through; }
+h3.case-heading { display:flex; align-items:center; gap:8px; }
+h3.case-heading input { width:18px; height:18px; flex:none; cursor:pointer; }
 
 .lightbox { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,.85); cursor:zoom-out; }
 .lightbox img { max-width:100%; max-height:100%; object-fit:contain; background:#fff; border-radius:6px; }
