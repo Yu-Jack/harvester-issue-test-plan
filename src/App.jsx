@@ -5,6 +5,7 @@ import plans from './plans.json';
 import { matches, parseTerms, snippet } from './search.js';
 import rehypeMark from './rehypeMark.js';
 import { extractHeadings, rehypeHeadingIds } from './headings.js';
+import { calloutClass } from './callouts.js';
 
 const useHash = () => {
   const [hash, setHash] = useState(location.hash.slice(1));
@@ -85,6 +86,7 @@ function PlanView({ plan, terms }) {
   const headings = useMemo(() => extractHeadings(plan.body), [plan.body]);
   const rehypePlugins = useMemo(() => [rehypeHeadingIds, [rehypeMark, { terms }]], [terms]);
   const components = useMemo(() => ({
+    p: ({ node, children }) => <p className={calloutClass(node)}>{children}</p>,
     img: ({ src, alt }) => (
       <img src={src} alt={alt} className="zoomable" onClick={() => setZoom({ src, alt })} />
     ),

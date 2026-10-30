@@ -36,6 +36,8 @@ pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; 
 code { background:var(--code); padding:.1em .3em; border-radius:4px; font-size:90%; }
 pre code { padding:0; background:none; }
 mark { background:var(--hit); color:inherit; }
+.callout { border-left:4px solid var(--callout); background:color-mix(in srgb, var(--callout) 12%, transparent); padding:8px 12px; border-radius:0 6px 6px 0; }
+.callout-expected { --callout:#1a7f37; }
 
 .outline { position:sticky; top:0; flex:none; width:240px; max-height:100%; overflow-y:auto; padding:16px 16px 16px 8px; margin-left:auto; border-left:1px solid var(--line); font-size:13px; }
 .outline-title { margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
