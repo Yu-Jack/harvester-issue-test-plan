@@ -9,6 +9,13 @@ source: https://github.com/harvester/harvester/issues/8436#issuecomment-65144058
 
 ### 1. Install the Resource Health Controller
 
+The controller lives in [harvester/resource-health-controller](https://github.com/harvester/resource-health-controller). Clone it first, and run the commands below from the repository root:
+
+```bash
+git clone https://github.com/harvester/resource-health-controller.git
+cd resource-health-controller
+```
+
 Make sure `kubectl` is connected to the target Harvester cluster, then run:
 
 ```bash
