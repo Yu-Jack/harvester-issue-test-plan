@@ -22,7 +22,7 @@ Make sure `kubectl` is connected to the target Harvester cluster, then run:
 helm install harvester-resource-health-controller ./chart \
   -n harvester-system \
   --set image.repository=jk82421/harvester-resource-health-controller \
-  --set image.tag=dev-15
+  --set image.tag=dev-18
 ```
 
 ### 2. Verify ComponentHealth Resources
